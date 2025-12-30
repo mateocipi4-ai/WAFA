@@ -1,0 +1,179 @@
+-- ZzyntrixHub | Animation Toggle + Lock + Minimize
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+	or player.CharacterAdded:Wait():WaitForChild("Humanoid")
+
+local enabled = false
+local lockedTracks = {}
+local lockedUI = false
+
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "ZzyntrixHub"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+-- MAIN FRAME
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 220, 0, 150)
+frame.Position = UDim2.new(0.7,0,0.3,0)
+frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+frame.Active = true
+frame.Draggable = true
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,14)
+
+-- TITLE BAR
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,35)
+title.BackgroundTransparency = 1
+title.Text = "ZzyntrixHub"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.TextColor3 = Color3.new(1,1,1)
+
+-- LOCK BUTTON (LEFT)
+local lockBtn = Instance.new("TextButton", frame)
+lockBtn.Size = UDim2.new(0,30,0,30)
+lockBtn.Position = UDim2.new(0,5,0,5)
+lockBtn.Text = "🔓"
+lockBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+lockBtn.TextColor3 = Color3.new(1,1,1)
+lockBtn.TextSize = 14
+Instance.new("UICorner", lockBtn).CornerRadius = UDim.new(0,8)
+
+-- CLOSE BUTTON (RIGHT)
+local closeBtn = Instance.new("TextButton", frame)
+closeBtn.Size = UDim2.new(0,30,0,30)
+closeBtn.Position = UDim2.new(1,-35,0,5)
+closeBtn.Text = "X"
+closeBtn.BackgroundColor3 = Color3.fromRGB(150,0,0)
+closeBtn.TextColor3 = Color3.new(1,1,1)
+closeBtn.TextSize = 14
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0,8)
+
+-- ANIMATION TOGGLE
+local toggle = Instance.new("TextButton", frame)
+toggle.Size = UDim2.new(0.8,0,0,40)
+toggle.Position = UDim2.new(0.1,0,0.4,0)
+toggle.Text = "Animation: OFF"
+toggle.Font = Enum.Font.GothamBold
+toggle.TextSize = 16
+toggle.TextColor3 = Color3.new(1,1,1)
+toggle.BackgroundColor3 = Color3.fromRGB(120,0,0)
+Instance.new("UICorner", toggle).CornerRadius = UDim.new(0,10)
+
+-- DISCORD BOX (COPY ONLY)
+local discordBox = Instance.new("TextBox", frame)
+discordBox.Size = UDim2.new(1, -10, 0, 25)
+discordBox.Position = UDim2.new(0,5,1,-35)
+discordBox.BackgroundColor3 = Color3.fromRGB(40,40,40)
+discordBox.TextColor3 = Color3.fromRGB(180,180,180)
+discordBox.TextSize = 12
+discordBox.Font = Enum.Font.Gotham
+discordBox.Text = "https://discord.gg/emKWFPrv8"
+discordBox.ClearTextOnFocus = false
+discordBox.TextEditable = false
+discordBox.TextXAlignment = Enum.TextXAlignment.Center
+Instance.new("UICorner", discordBox).CornerRadius = UDim.new(0,5)
+
+discordBox.Focused:Connect(function()
+	discordBox.CursorPosition = #discordBox.Text + 1
+	discordBox.SelectionStart = 1
+end)
+
+-- MINI BAR (WHEN CLOSED)
+local mini = Instance.new("Frame", gui)
+mini.Size = UDim2.new(0,180,0,40)
+mini.Position = UDim2.new(0.7,0,0.3,0)
+mini.BackgroundColor3 = Color3.fromRGB(20,20,20)
+mini.Visible = false
+mini.Active = true
+mini.Draggable = true
+Instance.new("UICorner", mini).CornerRadius = UDim.new(0,14)
+
+local miniText = Instance.new("TextLabel", mini)
+miniText.Size = UDim2.new(1,-50,1,0)
+miniText.Position = UDim2.new(0,10,0,0)
+miniText.BackgroundTransparency = 1
+miniText.Text = "ZzyntrixHub"
+miniText.Font = Enum.Font.GothamBold
+miniText.TextSize = 16
+miniText.TextColor3 = Color3.new(1,1,1)
+
+local openBtn = Instance.new("TextButton", mini)
+openBtn.Size = UDim2.new(0,30,0,30)
+openBtn.Position = UDim2.new(1,-35,0.5,-15)
+openBtn.Text = "+"
+openBtn.BackgroundColor3 = Color3.fromRGB(0,150,0)
+openBtn.TextColor3 = Color3.new(1,1,1)
+openBtn.TextSize = 18
+Instance.new("UICorner", openBtn).CornerRadius = UDim.new(0,8)
+
+-- LOCK TOGGLE
+lockBtn.MouseButton1Click:Connect(function()
+	lockedUI = not lockedUI
+	frame.Draggable = not lockedUI
+	mini.Draggable = not lockedUI
+	lockBtn.Text = lockedUI and "🔒" or "🔓"
+end)
+
+-- CLOSE / OPEN
+closeBtn.MouseButton1Click:Connect(function()
+	frame.Visible = false
+	mini.Visible = true
+end)
+
+openBtn.MouseButton1Click:Connect(function()
+	mini.Visible = false
+	frame.Visible = true
+end)
+
+-- ANIMATION LOGIC
+local function disableAnimations()
+	lockedTracks = {}
+	for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+		track:Stop()
+		table.insert(lockedTracks, track)
+	end
+end
+
+local function enableAnimations()
+	for _, track in ipairs(lockedTracks) do
+		if track.Parent then track:Play() end
+	end
+	lockedTracks = {}
+end
+
+toggle.MouseButton1Click:Connect(function()
+	enabled = not enabled
+	if enabled then
+		toggle.Text = "Animation: ON"
+		toggle.BackgroundColor3 = Color3.fromRGB(0,150,0)
+		disableAnimations()
+	else
+		toggle.Text = "Animation: OFF"
+		toggle.BackgroundColor3 = Color3.fromRGB(120,0,0)
+		enableAnimations()
+	end
+end)
+
+RunService.Heartbeat:Connect(function()
+	if enabled then
+		for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+			if not table.find(lockedTracks, track) then
+				track:Stop()
+				table.insert(lockedTracks, track)
+			end
+		end
+	end
+end)
+
+player.CharacterAdded:Connect(function(char)
+	humanoid = char:WaitForChild("Humanoid")
+	if enabled then disableAnimations() end
+end)
